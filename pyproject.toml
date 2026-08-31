@@ -1,0 +1,17 @@
+[project]
+name = "rag-vector-database-search"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "langchain-community>=0.4.2",
+    "langchain-openai>=1.6.0",
+    "langchain-postgres>=0.0.17",
+    "langchain-text-splitters>=1.1.2",
+    "psycopg2-binary>=2.9.12",
+    "pydantic-settings>=2.15.0",
+    "pypdf>=6.16.2",
+    "python-dotenv>=1.2.3",
+]
