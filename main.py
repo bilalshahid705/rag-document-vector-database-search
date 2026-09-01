@@ -1,11 +1,7 @@
+import uvicorn
 from fastapi import FastAPI
 
-from app.api.document import router as document_router
+app = FastAPI()
 
-
-app = FastAPI(
-    title="RAG Admin API",
-)
-
-
-app.include_router(document_router)
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
