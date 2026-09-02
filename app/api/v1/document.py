@@ -1,18 +1,17 @@
 from pathlib import Path
-
 from fastapi import APIRouter, UploadFile, File, HTTPException
-
-from app.services.document_loader import pdf_loader
-from app.services.chunker import chunk_document
-from app.services.embedding import create_embeddings
-
+from app.services import (
+    pdf_loader,
+    chunk_document,
+    create_embeddings,
+    store_document_chunks,
+)
 
 router = APIRouter(
-    prefix="/documents",
     tags=["Documents"],
 )
 
-MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+MAX_FILE_SIZE = 2 * 1024 * 1024
 
 
 @router.post("/upload")
@@ -54,11 +53,26 @@ async def upload_document(
     chunks = chunk_document(documents)
 
     # 3. Create embeddings
-    embeddings = create_embeddings(chunks)
+    embeddings = create_embeddings(
+        [chunk.page_content for chunk in chunks]
+    )
 
+    # 4. Store in Supabase
+    stored_count = store_document_chunks(
+        chunks=chunks,
+        embeddings=embeddings,
+        filename=file.filename,
+    )
+
+    # 10. Response
     return {
         "filename": file.filename,
-        "pages_loaded": len(documents),
+        "documents": len(documents),
         "chunks_created": len(chunks),
-        "message": "Document processed successfully.",
+        "embeddings_created": len(embeddings),
+        "chunks_stored": stored_count,
+        "message": (
+            "Document successfully "
+            "processed and stored."
+        ),
     }

@@ -2,7 +2,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-def chunk_document(documents: list[Document]) -> list[str]:
+def chunk_document(documents: list[Document]) -> list[Document]:
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=150,
@@ -15,5 +15,4 @@ def chunk_document(documents: list[Document]) -> list[str]:
         ],
     )
 
-    chunks = splitter.split_documents(documents)
-    return [chunk.page_content for chunk in chunks]
+    return splitter.split_documents(documents)

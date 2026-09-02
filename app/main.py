@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.document import router as document_router
+from app.api import api_router
 
 app = FastAPI(
     title="RAG Admin API",
@@ -16,5 +16,4 @@ app.add_middleware(
 
 
 
-
-app.include_router(document_router)
+app.include_router(api_router, prefix="/api/v1")
