@@ -1,7 +1,4 @@
-from sqlmodel import Session
-
-from app.core.database import engine
-from app.models.document import Document
+from app.services.vector_store import vector_store
 
 
 def store_document_chunks(
@@ -9,33 +6,28 @@ def store_document_chunks(
     embeddings: list[list[float]],
     filename: str,
 ) -> int:
-
     if len(chunks) != len(embeddings):
         raise ValueError(
             "Number of chunks and embeddings must be the same."
         )
 
-    documents = []
+    texts = [chunk.page_content for chunk in chunks]
+    metadatas = [
+        {
+            "source": filename,
+            "page": chunk.metadata.get("page"),
+            "page_label": chunk.metadata.get("page_label"),
+            "chunk_index": index,
+        }
+        for index, chunk in enumerate(chunks)
+    ]
+    ids = [f"{filename}:{index}" for index in range(len(chunks))]
 
-    for index, (chunk, embedding) in enumerate(
-        zip(chunks, embeddings)
-    ):
-        document = Document(
-            document_name=filename,
-            chunk_index=index,
-            content=chunk.page_content,
-            embedding=embedding,
-            doc_metadata={
-                "source": filename,
-                "page": chunk.metadata.get("page"),
-                "page_label": chunk.metadata.get("page_label"),
-            },
-        )
+    vector_store.add_embeddings(
+        texts=texts,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        ids=ids,
+    )
 
-        documents.append(document)
-
-    with Session(engine) as session:
-        session.add_all(documents)
-        session.commit()
-
-    return len(documents)
+    return len(chunks)

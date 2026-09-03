@@ -4,21 +4,14 @@ from app.schemas.query import QueryRequest
 from app.services.retriever import similarity_search
 from app.services.llm import llm_response
 
-
-router = APIRouter(
-    prefix="/rag",
-    tags=["RAG"],
-)
-
+router = APIRouter(tags=["RAG"])
 
 @router.post("/query")
-def query_documents(
-    request: QueryRequest,
-):
+def query_documents(request: QueryRequest):
     # 1. Retrieve relevant document chunks
     results = similarity_search(
         query=request.question,
-        top_k=request.top_k,
+        top_k = 5,
     )
 
     # 2. Generate answer using retrieved context
@@ -31,11 +24,11 @@ def query_documents(
     return {
         "question": request.question,
         "answer": answer,
-        "sources": [
-            {
-                "content": document.page_content,
-                "metadata": document.metadata,
-            }
-            for document in results
-        ],
+        # "sources": [
+        #     {
+        #         "content": document.page_content,
+        #         "metadata": document.metadata,
+        #     }
+        #     for document in results
+        # ],
     }
