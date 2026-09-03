@@ -1,78 +1,44 @@
-from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.services import (
-    pdf_loader,
-    chunk_document,
-    create_embeddings,
-    store_document_chunks,
-)
+from app.services.document_loader import pdf_loader
+from app.services.chunker import chunk_document
+from app.services.vector_store import vector_store
 
 router = APIRouter(
+    prefix="/documents",
     tags=["Documents"],
 )
 
-MAX_FILE_SIZE = 2 * 1024 * 1024
-
-
 @router.post("/upload")
-async def upload_document(
-    file: UploadFile = File(...)
-):
-    # Check file type
-    if file.content_type != "application/pdf":
+async def upload_document(file: UploadFile = File(...)):
+
+    if not file.filename or not file.filename.endswith(".pdf"):
         raise HTTPException(
             status_code=400,
-            detail="Only PDF files are allowed.",
+            detail="Only PDF files are supported.",
         )
-
-    # Read file
-    content = await file.read()
-
-    # Check file size
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="File size must not exceed 2 MB.",
-        )
-
-    # Create upload directory
-    
-    upload_dir = Path("documents")
-    upload_dir.mkdir(exist_ok=True)
 
     # Save file
-    file_path = upload_dir / file.filename
+    file_path = f"/tmp/{file.filename}"
 
-    with open(file_path, "wb") as f:
-        f.write(content)
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
 
-    # 1. Extract PDF pages
-    documents = pdf_loader(str(file_path))
+    # PDF → Documents
+    documents = pdf_loader(file_path)
 
-    # 2. Create chunks
+    # Documents → Chunks
     chunks = chunk_document(documents)
 
-    # 3. Create embeddings
-    embeddings = create_embeddings(
-        [chunk.page_content for chunk in chunks]
-    )
+    # Add useful metadata
+    for index, chunk in enumerate(chunks):
+        chunk.metadata["document_name"] = file.filename
+        chunk.metadata["chunk_index"] = index
 
-    # 4. Store in Supabase
-    stored_count = store_document_chunks(
-        chunks=chunks,
-        embeddings=embeddings,
-        filename=file.filename,
-    )
+    # Chunks → Embeddings → PGVector
+    vector_store.add_documents(chunks)
 
-    # 10. Response
     return {
-        "filename": file.filename,
-        "documents": len(documents),
-        "chunks_created": len(chunks),
-        "embeddings_created": len(embeddings),
-        "chunks_stored": stored_count,
-        "message": (
-            "Document successfully "
-            "processed and stored."
-        ),
+        "message": "Document indexed successfully.",
+        "document_name": file.filename,
+        "chunks": len(chunks),
     }
